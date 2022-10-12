@@ -20,7 +20,7 @@
 #include <thread>
 
 class MoChengKCP {
-  struct userData {
+  struct sessionData {
     sockaddr_in addr;
     MoChengKCP *udp;
   };
@@ -30,14 +30,15 @@ private:
   sockaddr_in serverAddr;
   sockaddr_in endpoint;
   int len = sizeof(sockaddr);
-  IKCPCB *kcpClient;
+  IKCPCB *testKcpClient;
 
   std::map<int, IKCPCB *> sessions;
   static int udp_output(const char *buf, int len, ikcpcb *kcp, void *user) {
 
-    userData *user1 = (userData *)user;
-    auto endpoint = user1->addr;
-    user1->udp->UDP_Send(&endpoint, (void *)buf, len);
+    auto userData = (sessionData *)user;
+    auto endpoint = userData->addr;
+
+    userData->udp->UDP_Send(&endpoint, (void *)buf, len);
     std::cout << "In output" << std::endl;
 
     return 0;
@@ -75,12 +76,11 @@ public:
     kcpHandle->output = udp_output;
 
     sessions.emplace(kcpID, kcpHandle);
-    int a = 0;
   }
   void Work() {
     std::thread tt([this] { KCPUpdate(); });
     while (true) {
-      // this->Update();
+
       char mes[2048];
 
       auto bufSize = recvfrom(socketFd, mes, 2048, 0, (sockaddr *)&endpoint,
@@ -92,8 +92,9 @@ public:
       }
 
       std::cout << "udp received:  " << bufSize << "  |  " << mes << std::endl;
+      //test
       if (!sessions[0]) {
-        userData *user = new userData{endpoint, this};
+        sessionData *user = new sessionData{endpoint, this};
         SpawnNewKCPSession(0, user);
       } else {
 
@@ -137,21 +138,21 @@ public:
 
   void StartClient() {
     serverAddr.sin_port = 8888;
-    userData *user = new userData{serverAddr, this};
-    kcpClient = ikcp_create(0, user);
-    ikcp_nodelay(kcpClient, 2, 10, 2, 1);
-    ikcp_wndsize(kcpClient, 128, 128);
-    kcpClient->rx_minrto = 10;
-    kcpClient->fastresend = 1;
+    sessionData *user = new sessionData{serverAddr, this};
+    testKcpClient = ikcp_create(0, user);
+    ikcp_nodelay(testKcpClient, 2, 10, 2, 1);
+    ikcp_wndsize(testKcpClient, 128, 128);
+    testKcpClient->rx_minrto = 10;
+    testKcpClient->fastresend = 1;
 
-    kcpClient->output = udp_output;
-    sessions.emplace(kcpClient->conv, kcpClient);
+    testKcpClient->output = udp_output;
+    sessions.emplace(testKcpClient->conv, testKcpClient);
   }
   void KCPSend(std::string mes) {
 
     char buf[512];
     strcpy(buf, mes.c_str());
 
-    ikcp_send(kcpClient, buf, 512);
+    ikcp_send(testKcpClient, buf, 512);
   }
 };
