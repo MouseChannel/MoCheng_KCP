@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/kcptest/build",
+  "command": "/usr/bin/clang++ -isystem /home/vcpkg/installed/x64-linux/include -g -o CMakeFiles/kcptest.dir/main.cpp.o -c /home/kcptest/main.cpp",
+  "file": "/home/kcptest/main.cpp"
+}
+]
